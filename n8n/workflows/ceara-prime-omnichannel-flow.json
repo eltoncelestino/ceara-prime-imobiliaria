@@ -1,0 +1,260 @@
+{
+  "name": "Ceará Prime Imóveis - Omnichannel, IA, Round-Robin & SLA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ceara-prime/lead-intake",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook-intake",
+      "name": "Webhook Entrada (Meta Ads / ZapImóveis)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.NEXT_PUBLIC_APP_URL}}/api/webhooks/n8n/lead-intake",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { name: $json.body.name, phone: $json.body.phone, email: $json.body.email, source: $json.body.source || 'META_ADS', preferredNeighborhood: $json.body.neighborhood } }}"
+      },
+      "id": "node-http-intake",
+      "name": "PostgreSQL Upsert (< 1s)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.EVOLUTION_API_URL}}/message/sendText/{{$env.EVOLUTION_INSTANCE}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.EVOLUTION_API_KEY}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { number: $json.phone, text: $json.greetingMessage } }}"
+      },
+      "id": "node-evo-greeting",
+      "name": "Evolution API - Saudação < 1s",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ceara-prime/whatsapp-reply",
+        "responseMode": "onReceived"
+      },
+      "id": "node-webhook-wa",
+      "name": "Webhook Resposta WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 460]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "string": [{ "value1": "={{$json.body.message.toLowerCase()}}", "operation": "contains", "value2": "meireles" }] }, "outputKey": "Meireles" },
+            { "conditions": { "string": [{ "value1": "={{$json.body.message.toLowerCase()}}", "operation": "contains", "value2": "aldeota" }] }, "outputKey": "Aldeota" },
+            { "conditions": { "string": [{ "value1": "={{$json.body.message.toLowerCase()}}", "operation": "contains", "value2": "cocó" }] }, "outputKey": "Cocó" },
+            { "conditions": { "string": [{ "value1": "={{$json.body.message.toLowerCase()}}", "operation": "contains", "value2": "dionísio" }] }, "outputKey": "Dionísio Torres" },
+            { "conditions": { "string": [{ "value1": "={{$json.body.message.toLowerCase()}}", "operation": "contains", "value2": "beira-mar" }] }, "outputKey": "Beira-Mar" }
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "node-switch-bairro",
+      "name": "Switch por Bairro (Fortaleza)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [460, 460]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Você é a assistente virtual da Ceará Prime Imóveis S.A. em Fortaleza-CE. Extraia do texto do cliente em JSON: { objective: 'COMPRAR'|'ALUGAR'|'INVESTIR'|null, budgetMax: number|null, preferredNeighborhood: 'Meireles'|'Aldeota'|'Cocó'|'Dionísio Torres'|'Beira-Mar'|null, aiReply: string }."
+            },
+            {
+              "role": "user",
+              "content": "={{$json.body.message}}"
+            }
+          ]
+        },
+        "jsonOutput": true
+      },
+      "id": "node-openai-triage",
+      "name": "OpenAI - Triagem & Extração",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.6,
+      "position": [720, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.NEXT_PUBLIC_APP_URL}}/api/webhooks/n8n/qualify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { phone: $('Webhook Resposta WhatsApp').item.json.body.phone, objective: $json.message.content.objective, budgetMax: $json.message.content.budgetMax, preferredNeighborhood: $json.message.content.preferredNeighborhood, userMessage: $('Webhook Resposta WhatsApp').item.json.body.message, aiReply: $json.message.content.aiReply } }}"
+      },
+      "id": "node-http-qualify",
+      "name": "PostgreSQL Qualify & Imóveis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 460]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            { "value1": "={{$json.isFullyQualified}}", "value2": true }
+          ]
+        }
+      },
+      "id": "node-if-qualified",
+      "name": "IF Lead Qualificado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.NEXT_PUBLIC_APP_URL}}/api/webhooks/n8n/round-robin",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { leadId: $json.lead.id } }}"
+      },
+      "id": "node-http-round-robin",
+      "name": "Round-Robin Corretor + SLA 2m",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 400]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "seconds", "secondsInterval": 30 }]
+        }
+      },
+      "id": "node-cron-sla",
+      "name": "Cron SLA Check (30s)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 740]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.NEXT_PUBLIC_APP_URL}}/api/webhooks/n8n/sla-check",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }
+          ]
+        }
+      },
+      "id": "node-http-sla",
+      "name": "Consultar SLA > 2 Minutos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 740]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            { "value1": "={{$json.breachedCount}}", "operation": "larger", "value2": 0 }
+          ]
+        }
+      },
+      "id": "node-if-sla",
+      "name": "IF Estouro de SLA?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 740]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_MANAGER_CHAT_ID}}",
+        "text": "={{$json.alerts[0].telegramMessage}}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "node-telegram-manager",
+      "name": "Telegram - Gerente Roberto Viana",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [960, 720]
+    }
+  ],
+  "connections": {
+    "Webhook Entrada (Meta Ads / ZapImóveis)": {
+      "main": [[{ "node": "PostgreSQL Upsert (< 1s)", "type": "main", "index": 0 }]]
+    },
+    "PostgreSQL Upsert (< 1s)": {
+      "main": [[{ "node": "Evolution API - Saudação < 1s", "type": "main", "index": 0 }]]
+    },
+    "Webhook Resposta WhatsApp": {
+      "main": [[{ "node": "Switch por Bairro (Fortaleza)", "type": "main", "index": 0 }]]
+    },
+    "Switch por Bairro (Fortaleza)": {
+      "main": [
+        [{ "node": "OpenAI - Triagem & Extração", "type": "main", "index": 0 }],
+        [{ "node": "OpenAI - Triagem & Extração", "type": "main", "index": 0 }],
+        [{ "node": "OpenAI - Triagem & Extração", "type": "main", "index": 0 }],
+        [{ "node": "OpenAI - Triagem & Extração", "type": "main", "index": 0 }],
+        [{ "node": "OpenAI - Triagem & Extração", "type": "main", "index": 0 }],
+        [{ "node": "OpenAI - Triagem & Extração", "type": "main", "index": 0 }]
+      ]
+    },
+    "OpenAI - Triagem & Extração": {
+      "main": [[{ "node": "PostgreSQL Qualify & Imóveis", "type": "main", "index": 0 }]]
+    },
+    "PostgreSQL Qualify & Imóveis": {
+      "main": [[{ "node": "IF Lead Qualificado?", "type": "main", "index": 0 }]]
+    },
+    "IF Lead Qualificado?": {
+      "main": [[{ "node": "Round-Robin Corretor + SLA 2m", "type": "main", "index": 0 }]]
+    },
+    "Cron SLA Check (30s)": {
+      "main": [[{ "node": "Consultar SLA > 2 Minutos", "type": "main", "index": 0 }]]
+    },
+    "Consultar SLA > 2 Minutos": {
+      "main": [[{ "node": "IF Estouro de SLA?", "type": "main", "index": 0 }]]
+    },
+    "IF Estouro de SLA?": {
+      "main": [[{ "node": "Telegram - Gerente Roberto Viana", "type": "main", "index": 0 }]]
+    }
+  }
+}

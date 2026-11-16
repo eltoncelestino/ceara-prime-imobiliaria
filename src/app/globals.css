@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: normal;
+    word-spacing: normal;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #0a1426;
+    overflow-x: hidden;
+  }
+
+  .dark body {
+    background-color: #050b18;
+    background-image: radial-gradient(
+      ellipse 80% 45% at 50% 0%,
+      rgba(16, 54, 82, 0.42) 0%,
+      rgba(5, 11, 24, 0) 70%
+    );
+    color: #f1f5f9;
+  }
+}
+
+/* Textura sutil de ruído a 3% */
+.noise-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* Máscara em degradê para fundir a foto do header com o ink-950 */
+.header-hero-mask {
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+}
+
+/* Scrollbar fina e discreta em ink-700 */
+.scrollbar-luxury::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-luxury::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-luxury::-webkit-scrollbar-thumb {
+  background: #1a2a4a;
+  border-radius: 9999px;
+}
+
+.scrollbar-luxury::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 106, 0.45);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

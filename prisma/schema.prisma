@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LeadSource {
+  META_ADS
+  ZAP_IMOVEIS
+  SITE_CHAT
+  WHATSAPP
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFYING
+  QUALIFIED
+  VISIT_SCHEDULED
+  HANDOFF_PENDING
+  IN_ATTENDANCE
+  PROPOSAL
+  CLOSED_WON
+  LOST
+}
+
+enum LeadTemperature {
+  QUENTE
+  MORNO
+  FRIO
+}
+
+enum LeadObjective {
+  COMPRAR
+  ALUGAR
+  INVESTIR
+}
+
+enum PropertyType {
+  APARTAMENTO
+  COBERTURA
+  CASA_CONDOMINIO
+  SALA_COMERCIAL
+}
+
+enum MessageSender {
+  USER
+  AI
+  BROKER
+  SYSTEM
+}
+
+enum MessageChannel {
+  WHATSAPP
+  WEB_CHAT
+}
+
+enum VisitStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Broker {
+  id             String   @id @default(cuid())
+  name           String
+  creci          String   @unique
+  phone          String
+  email          String   @unique
+  specialties    String[] // Ex: ["Meireles", "Beira-Mar"]
+  isActive       Boolean  @default(true)
+  lastAssignedAt DateTime @default(now())
+  calendarId     String?
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  leads  Lead[]
+  visits Visit[]
+
+  @@index([isActive, lastAssignedAt])
+}
+
+model Property {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  slug         String        @unique
+  title        String
+  description  String
+  type         PropertyType
+  objective    LeadObjective
+  price        Int // Valor em Reais (BRL)
+  neighborhood String // Meireles, Aldeota, Cocó, Dionísio Torres, Beira-Mar
+  address      String
+  latitude     Float
+  longitude    Float
+  bedrooms     Int
+  suites       Int
+  parkingSpots Int
+  areaSqm      Int
+  oceanView    Boolean       @default(false)
+  imageUrl     String
+  isAvailable  Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  visits Visit[]
+
+  @@index([neighborhood, objective, isAvailable, price])
+}
+
+model Lead {
+  id                    String         @id @default(cuid())
+  name                  String
+  phone                 String         @unique
+  email                 String?
+  source                LeadSource     @default(META_ADS)
+  status                LeadStatus     @default(NEW)
+  objective             LeadObjective?
+  budgetMin             Int?
+  budgetMax             Int?
+  preferredNeighborhood String?
+  score                 Int             @default(0) // 0 a 100
+  temperature           LeadTemperature @default(MORNO)
+  optInLgpd             Boolean         @default(true)
+  consentAt             DateTime?       // Timestamp explícito de consentimento LGPD
+  optedOutAt            DateTime?       // Preenchido se responder "SAIR"
+  propertyId            String?         // Imóvel de origem (se veio da página /imoveis/[slug])
+  utm                   Json?           // { source, medium, campaign, term, content }
+  assignedBrokerId      String?
+  assignedBroker        Broker?        @relation(fields: [assignedBrokerId], references: [id])
+  handoffAt             DateTime? // Momento do transbordo para corretor
+  assumedAt             DateTime? // Momento em que o corretor assumiu
+  slaBreached           Boolean        @default(false)
+  lastMessageAt         DateTime       @default(now())
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  messages ChatMessage[]
+  visits   Visit[]
+
+  @@index([status, handoffAt, slaBreached])
+  @@index([preferredNeighborhood])
+}
+
+model ChatMessage {
+  id            String         @id @default(cuid())
+  leadId        String
+  lead          Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sender        MessageSender
+  content       String
+  propertyCards Json? // Snapshot de cards de imóveis enviados na conversa
+  channel       MessageChannel @default(WHATSAPP)
+  createdAt     DateTime       @default(now())
+
+  @@index([leadId, createdAt])
+}
+
+model Visit {
+  id                String      @id @default(cuid())
+  leadId            String
+  lead              Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  propertyId        String
+  property          Property    @relation(fields: [propertyId], references: [id])
+  brokerId          String
+  broker            Broker      @relation(fields: [brokerId], references: [id])
+  scheduledAt       DateTime
+  status            VisitStatus @default(SCHEDULED)
+  confirmationToken String      @unique @default(cuid())
+  googleMapsUrl     String
+  reminderSentAt    DateTime?
+  confirmedAt       DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([brokerId, scheduledAt])
+  @@index([status, scheduledAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  entity    String // Ex: "LEAD", "VISIT", "SLA"
+  entityId  String
+  action    String // Ex: "INTAKE_200", "SLA_BREACH_TELEGRAM", "OPT_OUT_LGPD"
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
