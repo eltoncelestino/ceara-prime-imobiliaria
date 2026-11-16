@@ -14,8 +14,8 @@ Plataforma completa de alta conversão para o mercado imobiliário de alto padr�
 
 ## Prévia Visual
 
-### Landing Page Pública (`/`) — Explore por Bairro em Fortaleza
-![Landing Page Bairros de Fortaleza](docs/images/landing-bairros.jpg)
+### Landing Page Pública (`/`) — Hero, Busca & Concierge IA
+![Landing Page Hero Fortaleza](docs/images/landing-hero.jpg)
 
 ### Private CRM (`/crm`) — Kanban, SLA ao Vivo & Filtros por Bairro
 ![Private CRM Kanban](docs/images/crm-kanban.jpg)
