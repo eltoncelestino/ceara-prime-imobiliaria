@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "Ceará Prime Imóveis S.A. | Private CRM & Concierge IA",
   description:
     "Plataforma de luxo para gestão de leads imobiliários, triagem por IA via n8n e atendimento instantâneo em Fortaleza-CE.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
