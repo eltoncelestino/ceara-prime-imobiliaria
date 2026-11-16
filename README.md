@@ -14,13 +14,31 @@ Plataforma completa de alta conversão para o mercado imobiliário de alto padr�
 
 ## Prévia Visual
 
-### Private CRM — Kanban, SLA ao Vivo & Filtros por Bairro
+### Landing Page Pública (`/`) — Explore por Bairro em Fortaleza
+![Landing Page Bairros de Fortaleza](docs/images/landing-bairros.jpg)
+
+### Private CRM (`/crm`) — Kanban, SLA ao Vivo & Filtros por Bairro
 ![Private CRM Kanban](docs/images/crm-kanban.jpg)
 
 ### Concierge IA — Triagem Instantânea & Cards de Imóveis
 ![Concierge IA Chat](docs/images/concierge-chat.png)
 
 > **Sobre vídeo de demonstração:** Este repositório não inclui gravação de vídeo `.mp4` embutida; para adicionar um vídeo de tour ao README no GitHub, basta arrastar um arquivo `.mp4` (até 10 MB) diretamente na edição do `README.md` na interface web do GitHub.
+
+---
+
+## Landing Page Pública & Catálogo (`/`, `/imoveis`, `/imoveis/[slug]`)
+
+Projetada com o conceito **"Luxo Litorâneo"** (`navy-950`, `snow-50`, `sand-100`, `gold-400` e `emerald-500` exclusivo para CTAs), alternando seções claras e escuras para máxima conversão:
+
+1. **Header Fixo & Barra de Progresso:** Navegação com glassmorphism que reduz ao rolar, drawer mobile, botão WhatsApp e atalho para o Concierge IA.
+2. **Hero `100dvh` com Parallax & Barra de Busca:** Foto da orla de Fortaleza ao entardecer com busca integrada (Objetivo, Bairro e Faixa de Valor) redirecionando para `/imoveis`.
+3. **Faixa de Prova Social & Imóveis em Destaque:** Contadores animados no viewport e grid de 6 imóveis com `PropertyCard` (preço, metragem, quartos, vagas e agendamento em 1 clique).
+4. **Explore por Bairro:** 5 cards imersivos (**Meireles, Beira-Mar, Aldeota, Cocó e Dionísio Torres**) com faixa de preço média e link direto para o catálogo filtrado.
+5. **Como Funciona (3 Passos) & Concierge Showcase:** Linha de progresso SVG animada + mockup em loop do atendimento instantâneo.
+6. **Diferenciais, Equipe & Depoimentos (Demonstração):** Corretores especialistas com deep link contextual de WhatsApp.
+7. **Formulário de Captação LGPD (`POST /api/webhooks/leads`):** Máscara de telefone BR, captura de UTMs, *honeypot* anti-bot, *rate limiting* por IP e checkbox de consentimento obrigatório (não pré-marcado).
+8. **SEO & Acessibilidade:** `sitemap.ts`, `robots.ts`, dados estruturados JSON-LD (`RealEstateAgent` e `Product/Offer`), banner de cookies LGPD e suporte a `prefers-reduced-motion`.
 
 ---
 
